@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account and profile details for Census TA Employees and Admin.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth unique UID" },
+        "userId": { "type": "string", "description": "8-character alphanumeric User ID" },
+        "employeeName": { "type": "string", "description": "Employee Full Name" },
+        "fatherName": { "type": "string", "description": "Father's Name" },
+        "dob": { "type": "string", "description": "Date of Birth (YYYY-MM-DD)" },
+        "mobile": { "type": "string", "description": "Mobile Number" },
+        "email": { "type": "string", "description": "Optional Email Address" },
+        "gender": { "type": "string", "description": "Gender" },
+        "designation": { "type": "string", "description": "Designation" },
+        "officeName": { "type": "string", "description": "Deputed Office Name" },
+        "district": { "type": "string", "description": "District" },
+        "joiningDate": { "type": "string", "description": "Joining Date (YYYY-MM-DD)" },
+        "role": { "type": "string", "enum": ["super_admin", "admin", "employee"], "description": "User Role" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "Employee Status" },
+        "createdAt": { "type": "string", "description": "Timestamp of profile creation" }
+      },
+      "required": ["uid", "userId", "employeeName", "role", "status"]
+    },
+    "Attendance": {
+      "title": "Attendance Record",
+      "description": "Daily check-in and check-out logs of employees.",
+      "type": "object",
+      "properties": {
+        "attendanceId": { "type": "string", "description": "Unique attendance log ID" },
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "userId": { "type": "string", "description": "Alphanumeric User ID" },
+        "employeeName": { "type": "string", "description": "Employee Name" },
+        "officeName": { "type": "string", "description": "Office Name" },
+        "date": { "type": "string", "description": "Attendance Date (YYYY-MM-DD)" },
+        "checkInTime": { "type": "string", "description": "Check-in time (e.g. 09:30 AM)" },
+        "checkOutTime": { "type": "string", "description": "Check-out time (e.g. 05:30 PM)" },
+        "checkInPhoto": { "type": "string", "description": "Base64 encoded Check-in Photo or Storage URL" },
+        "checkOutPhoto": { "type": "string", "description": "Base64 encoded Check-out Photo or Storage URL" },
+        "checkInLatitude": { "type": "number", "description": "Latitude of check-in" },
+        "checkInLongitude": { "type": "number", "description": "Longitude of check-in" },
+        "checkOutLatitude": { "type": "number", "description": "Latitude of check-out" },
+        "checkOutLongitude": { "type": "number", "description": "Longitude of check-out" },
+        "gpsAccuracy": { "type": "number", "description": "GPS accuracy radius in meters" },
+        "browser": { "type": "string", "description": "Browser user agent" },
+        "device": { "type": "string", "description": "Device classification" },
+        "createdAt": { "type": "string", "description": "ISO timestamp when check-in occurred" }
+      },
+      "required": ["attendanceId", "uid", "userId", "employeeName", "officeName", "date", "checkInTime", "checkInPhoto"]
+    },
+    "Settings": {
+      "title": "System Settings",
+      "description": "Configurable attendance timings managed by admins.",
+      "type": "object",
+      "properties": {
+        "checkInStart": { "type": "string", "description": "Check-In Start Time (e.g., 09:00 AM)" },
+        "checkInEnd": { "type": "string", "description": "Check-In End Time (e.g., 11:30 AM)" },
+        "checkOutEnd": { "type": "string", "description": "Check-Out Allowed Until Time (e.g., 07:00 PM)" }
+      },
+      "required": ["checkInStart", "checkInEnd", "checkOutEnd"]
+    },
+    "AuditLog": {
+      "title": "System Audit Log",
+      "description": "Audit trails for administrative actions.",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string", "description": "Unique log ID" },
+        "adminUid": { "type": "string", "description": "Admin Auth UID" },
+        "adminName": { "type": "string", "description": "Admin Name" },
+        "action": { "type": "string", "description": "Admin action description" },
+        "details": { "type": "string", "description": "Detailed log information" },
+        "timestamp": { "type": "string", "description": "ISO timestamp of the action" }
+      },
+      "required": ["logId", "adminUid", "adminName", "action", "details", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection, indexed by document ID matching auth uid or custom ID."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Attendance logs collection."
+    },
+    "/settings/{settingsId}": {
+      "schema": "Settings",
+      "description": "System settings collection."
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "System administrative audit logs collection."
+    }
+  }
+}

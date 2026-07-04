@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper to get user document
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user matches document owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check user role
+    function isAdminOrSuper() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        (getUserData(request.auth.uid).role == "admin" || getUserData(request.auth.uid).role == "super_admin");
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        getUserData(request.auth.uid).role == "super_admin";
+    }
+
+    // Rules for users collection
+    match /users/{userId} {
+      // Users can read their own profile, Admins/Super Admins can read all profiles
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdminOrSuper());
+      
+      // Super Admin/Admin can create. Users themselves can create bootstrap profiles on first login.
+      allow create: if isAdminOrSuper() || (
+        isAuthenticated() && isOwner(userId) && (
+          (request.resource.data.userId == "superadmin" && request.resource.data.role == "super_admin") ||
+          (request.resource.data.userId == "admin01" && request.resource.data.role == "admin")
+        )
+      );
+      
+      // Allow updates if the logged in user owns the profile (for changing password) but prevent self-role-escalation
+      allow update: if isAdminOrSuper() || (
+        isAuthenticated() && isOwner(userId) && 
+        request.resource.data.role == resource.data.role && 
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.uid == resource.data.uid
+      );
+      
+      allow delete: if isSuperAdmin() || (isAdminOrSuper() && resource.data.role == "employee");
+    }
+    
+    // Rules for attendance collection
+    match /attendance/{attendanceId} {
+      // Users can read their own attendance, Admins/Super Admins can read all
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid || isAdminOrSuper());
+      
+      // Create allowed for self or admin/super_admin
+      allow create: if isAuthenticated() && (request.resource.data.uid == request.auth.uid || isAdminOrSuper());
+      
+      // Update allowed for self (marking check-out) or admin/super_admin
+      allow update: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdminOrSuper());
+      
+      // Delete allowed for admin/super_admin
+      allow delete: if isAdminOrSuper();
+    }
+    
+    // Rules for settings collection
+    match /settings/{settingsId} {
+      // All users (even unauthenticated on boot) can read settings so fetchSettings doesn't fail on app load
+      allow read: if true;
+      // Admin/Super Admin can write settings
+      allow write: if isAdminOrSuper();
+    }
+    
+    // Rules for audit_logs collection
+    match /audit_logs/{logId} {
+      // Only Admin/Super Admin can read or write audit logs
+      allow read, write: if isAdminOrSuper();
+    }
+  }
+}

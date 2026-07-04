@@ -1,0 +1,11 @@
+{
+  "name": "Census TA Attendance Management",
+  "description": "An attendance management web application for Census 2027 Temporary Assistant (TA) Employees with live GPS tracking and photo capture.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
