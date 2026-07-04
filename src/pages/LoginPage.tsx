@@ -197,29 +197,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Demo Credentials Subpanel for reviewers (High-craftsmanship detail) */}
-        <div className="mt-8 pt-5 border-t border-slate-800">
-          <div className="flex gap-2 items-center text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2.5">
-            <ShieldCheck className="h-4.5 w-4.5" />
-            <span>Developer Seeding Credentials</span>
-          </div>
-          <div className="bg-[#0A0A0B]/65 border border-slate-800 rounded-xl p-3 text-xs space-y-2 font-mono leading-relaxed text-slate-400">
-            <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">1. National Super Admin</span>
-              <div className="flex justify-between mt-0.5">
-                <span>ID: <strong className="text-slate-300">superadmin</strong></span>
-                <span>Pass: <strong className="text-slate-300">Super@Admin2027</strong></span>
-              </div>
-            </div>
-            <div className="border-t border-slate-900 my-2 pt-2">
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">2. District Admin</span>
-              <div className="flex justify-between mt-0.5">
-                <span>ID: <strong className="text-slate-300">admin01</strong></span>
-                <span>Pass: <strong className="text-slate-300">Admin@Pass2027</strong></span>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
       </div>
 
