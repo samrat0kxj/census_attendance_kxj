@@ -118,13 +118,21 @@ export default function EmployeeAttendanceHistory({ attendanceHistory }: Employe
                       {record.officeName}
                     </td>
                     <td className="py-3.5 px-5">
-                      <div className="flex items-center gap-1.5 text-slate-300">
-                        <Clock className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="font-mono text-xs">{record.checkInTime}</span>
-                      </div>
+                      {record.isLeave ? (
+                        <span className="text-xs text-amber-500 font-medium">
+                          {record.leaveReason || "On Leave"}
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <Clock className="h-3.5 w-3.5 text-slate-500" />
+                          <span className="font-mono text-xs">{record.checkInTime}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-5">
-                      {record.checkOutTime ? (
+                      {record.isLeave ? (
+                        <span className="text-xs text-slate-500 font-mono">—</span>
+                      ) : record.checkOutTime ? (
                         <div className="flex items-center gap-1.5 text-slate-300">
                           <Clock className="h-3.5 w-3.5 text-slate-500" />
                           <span className="font-mono text-xs">{record.checkOutTime}</span>
@@ -135,18 +143,25 @@ export default function EmployeeAttendanceHistory({ attendanceHistory }: Employe
                     </td>
                     <td className="py-3.5 px-5 text-right">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        complete 
+                        record.isLeave
+                          ? "bg-amber-950/20 text-amber-500 border border-amber-900/40"
+                          : complete 
                           ? "bg-emerald-950/20 text-emerald-400 border border-emerald-900/40" 
-                          : "bg-amber-950/20 text-amber-400 border border-amber-900/40"
+                          : "bg-[#1A1A2F] text-indigo-400 border border-indigo-900/40"
                       }`}>
-                        {complete ? (
+                        {record.isLeave ? (
+                          <>
+                            <Calendar className="h-3 w-3 shrink-0 text-amber-500" />
+                            Leave
+                          </>
+                        ) : complete ? (
                           <>
                             <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
                             Completed
                           </>
                         ) : (
                           <>
-                            <AlertCircle className="h-3 w-3 shrink-0 text-amber-400" />
+                            <AlertCircle className="h-3 w-3 shrink-0 text-indigo-400" />
                             Checked-In
                           </>
                         )}

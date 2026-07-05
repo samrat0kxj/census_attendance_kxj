@@ -27,18 +27,20 @@ export interface AttendanceRecord {
   employeeName: string;
   officeName: string;
   date: string; // YYYY-MM-DD
-  checkInTime: string; // e.g. "09:30 AM"
+  checkInTime?: string; // e.g. "09:30 AM" (Optional if on leave)
   checkOutTime?: string; // e.g. "06:15 PM"
-  checkInPhoto: string; // base64 representation of image
+  checkInPhoto?: string; // base64 representation of image (Optional if on leave)
   checkOutPhoto?: string; // base64 representation of image
-  checkInLatitude: number;
-  checkInLongitude: number;
+  checkInLatitude?: number;
+  checkInLongitude?: number;
   checkOutLatitude?: number;
   checkOutLongitude?: number;
-  gpsAccuracy: number; // GPS accuracy in meters
-  browser: string;
-  device: string;
+  gpsAccuracy?: number; // GPS accuracy in meters
+  browser?: string;
+  device?: string;
   createdAt: string; // ISO string
+  isLeave?: boolean; // true if marked as leave
+  leaveReason?: string; // Optional reason or type of leave
 }
 
 export interface SystemSettings {

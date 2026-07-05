@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { 
   LogOut, User, MapPin, Camera, Clock, CheckCircle, AlertTriangle, 
-  Navigation, RefreshCw, Calendar, Sparkles, Building, Briefcase, FileText
+  Navigation, RefreshCw, Calendar, Sparkles, Building, Briefcase, FileText, X
 } from "lucide-react";
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
@@ -30,6 +30,11 @@ export default function EmployeeDashboard() {
   // Camera Overlay states
   const [activeCameraMode, setActiveCameraMode] = useState<"check_in" | "check_out" | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+
+  // Leave States
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveReason, setLeaveReason] = useState("Casual Leave");
+  const [customLeaveReason, setCustomLeaveReason] = useState("");
 
   const { dateStr, timeStr } = formatCurrentTime();
 
@@ -195,6 +200,42 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const handleMarkLeave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userProfile) return;
+    setSubmitting(true);
+    setActionError("");
+
+    const { dateStr: today } = formatCurrentTime();
+    const finalReason = customLeaveReason.trim() 
+      ? `${leaveReason}: ${customLeaveReason.trim()}`
+      : leaveReason;
+
+    try {
+      const attendanceId = "att_" + userProfile.uid + "_" + today;
+      const leaveRecord: AttendanceRecord = {
+        attendanceId,
+        uid: userProfile.uid,
+        userId: userProfile.userId,
+        employeeName: userProfile.employeeName,
+        officeName: userProfile.officeName || "N/A",
+        date: today,
+        isLeave: true,
+        leaveReason: finalReason,
+        createdAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, "attendance", attendanceId), leaveRecord);
+      setShowLeaveModal(false);
+      setCustomLeaveReason("");
+      await loadAttendanceData();
+    } catch (err: any) {
+      setActionError("Failed to mark leave: " + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate("/login");
@@ -314,67 +355,95 @@ export default function EmployeeDashboard() {
 
             {/* Today's Status Details */}
             {todayRecord ? (
-              <div className="space-y-3 pt-1 text-xs">
-                {/* Checked In Info */}
-                <div className="bg-emerald-950/20 border border-emerald-900/50 p-3 rounded-xl text-emerald-300 flex justify-between items-center">
+              todayRecord.isLeave ? (
+                <div className="bg-amber-950/20 border border-amber-900/40 p-4 rounded-xl text-amber-300 space-y-2 animate-fade-in">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    <Calendar className="h-5 w-5 text-amber-500 shrink-0" />
                     <div>
-                      <span className="font-semibold block">Checked In</span>
-                      <span className="text-[10px] text-emerald-400 font-mono">Time: {todayRecord.checkInTime}</span>
+                      <span className="font-semibold block text-sm">Today Marked as Leave</span>
+                      <span className="text-[10px] text-slate-500">Submitted: {new Date(todayRecord.createdAt).toLocaleTimeString()}</span>
                     </div>
                   </div>
-                  {todayRecord.checkInPhoto && (
-                    <img 
-                      src={todayRecord.checkInPhoto} 
-                      alt="Check In" 
-                      className="h-8 w-8 rounded-lg object-cover border border-emerald-900/40"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
+                  <div className="text-xs bg-[#1A1A1F] border border-slate-800 p-2.5 rounded-lg mt-2 text-slate-300">
+                    <span className="text-slate-500 font-bold block text-[9px] uppercase tracking-wider mb-0.5">Leave Type / Remarks</span>
+                    {todayRecord.leaveReason || "Casual Leave"}
+                  </div>
                 </div>
-
-                {/* Checked Out Info */}
-                {todayRecord.checkOutTime ? (
-                  <div className="bg-blue-950/20 border border-blue-900/50 p-3 rounded-xl text-blue-300 flex justify-between items-center">
+              ) : (
+                <div className="space-y-3 pt-1 text-xs">
+                  {/* Checked In Info */}
+                  <div className="bg-emerald-950/20 border border-emerald-900/50 p-3 rounded-xl text-emerald-300 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-blue-400" />
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
                       <div>
-                        <span className="font-semibold block">Checked Out</span>
-                        <span className="text-[10px] text-blue-400 font-mono">Time: {todayRecord.checkOutTime}</span>
+                        <span className="font-semibold block">Checked In</span>
+                        <span className="text-[10px] text-emerald-400 font-mono">Time: {todayRecord.checkInTime}</span>
                       </div>
                     </div>
-                    {todayRecord.checkOutPhoto && (
+                    {todayRecord.checkInPhoto && (
                       <img 
-                        src={todayRecord.checkOutPhoto} 
-                        alt="Check Out" 
-                        className="h-8 w-8 rounded-lg object-cover border border-blue-900/40"
+                        src={todayRecord.checkInPhoto} 
+                        alt="Check In" 
+                        className="h-8 w-8 rounded-lg object-cover border border-emerald-900/40"
                         referrerPolicy="no-referrer"
                       />
                     )}
                   </div>
-                ) : (
-                  /* Trigger Check-Out Button */
-                  <button
-                    onClick={() => startAttendanceFlow("check_out")}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    Mark Check-Out
-                  </button>
-                )}
-              </div>
+
+                  {/* Checked Out Info */}
+                  {todayRecord.checkOutTime ? (
+                    <div className="bg-blue-950/20 border border-blue-900/50 p-3 rounded-xl text-blue-300 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-blue-400" />
+                        <div>
+                          <span className="font-semibold block">Checked Out</span>
+                          <span className="text-[10px] text-blue-400 font-mono">Time: {todayRecord.checkOutTime}</span>
+                        </div>
+                      </div>
+                      {todayRecord.checkOutPhoto && (
+                        <img 
+                          src={todayRecord.checkOutPhoto} 
+                          alt="Check Out" 
+                          className="h-8 w-8 rounded-lg object-cover border border-blue-900/40"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    /* Trigger Check-Out Button */
+                    <button
+                      onClick={() => startAttendanceFlow("check_out")}
+                      disabled={submitting}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      Mark Check-Out
+                    </button>
+                  )}
+                </div>
+              )
             ) : (
-              /* Trigger Check-In Button */
-              <button
-                onClick={() => startAttendanceFlow("check_in")}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
-              >
-                <Camera className="h-4 w-4" />
-                Mark Check-In
-              </button>
+              <div className="space-y-2.5">
+                {/* Trigger Check-In Button */}
+                <button
+                  onClick={() => startAttendanceFlow("check_in")}
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
+                >
+                  <Camera className="h-4 w-4" />
+                  Mark Check-In
+                </button>
+
+                {/* Mark Leave Button */}
+                <button
+                  onClick={() => setShowLeaveModal(true)}
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-950/20 hover:bg-amber-950/30 text-amber-400 border border-amber-900/40 font-semibold rounded-xl cursor-pointer transition-all"
+                >
+                  <Calendar className="h-4 w-4 text-amber-400 animate-pulse" />
+                  Mark Leave
+                </button>
+              </div>
             )}
 
             {/* GPS Accuracy status loader */}
@@ -421,6 +490,71 @@ export default function EmployeeDashboard() {
 
         </div>
       </main>
+
+      {/* Leave Modal */}
+      {showLeaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in no-print">
+          <div className="bg-[#111114] border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-scale-up">
+            <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-[#151518]">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-amber-500 animate-pulse" />
+                <h3 className="font-display font-bold text-white text-base">Mark Day as Leave</h3>
+              </div>
+              <button
+                onClick={() => setShowLeaveModal(false)}
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleMarkLeave} className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Leave Category</label>
+                <select
+                  value={leaveReason}
+                  onChange={(e) => setLeaveReason(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-[#1A1A1F] border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-hidden cursor-pointer font-medium"
+                >
+                  <option value="Casual Leave" className="bg-[#111114]">Casual Leave</option>
+                  <option value="Sick Leave" className="bg-[#111114]">Sick Leave</option>
+                  <option value="Duty Leave" className="bg-[#111114]">Duty Leave (Census Field Assignment)</option>
+                  <option value="Maternity/Paternity Leave" className="bg-[#111114]">Maternity/Paternity Leave</option>
+                  <option value="Personal Emergency" className="bg-[#111114]">Personal Emergency</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Brief Description / Remarks (Optional)</label>
+                <textarea
+                  value={customLeaveReason}
+                  onChange={(e) => setCustomLeaveReason(e.target.value)}
+                  placeholder="e.g. Undergoing medical checkup, traveling out of district..."
+                  rows={3}
+                  className="w-full px-3 py-2.5 bg-[#1A1A1F] border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-hidden placeholder:text-slate-600 resize-none leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveModal(false)}
+                  className="flex-1 py-2.5 bg-[#1A1A1F] hover:bg-[#25252b] text-slate-300 text-xs font-semibold rounded-xl border border-slate-800 transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/25 transition-all cursor-pointer text-center disabled:opacity-50"
+                >
+                  {submitting ? "Submitting..." : "Confirm Leave"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer copyright and credit info */}
       <footer className="mt-12 text-center text-slate-600 text-xs font-mono relative z-10 space-y-1 py-6 border-t border-slate-900 max-w-6xl mx-auto px-4 no-print">

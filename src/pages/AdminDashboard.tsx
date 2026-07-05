@@ -167,10 +167,11 @@ export default function AdminDashboard() {
   const todayDateStr = formatCurrentTime().dateStr;
   const todayAttendances = attendances.filter(a => a.date === todayDateStr);
   
-  const presentTodayCount = todayAttendances.length;
-  const checkedInCount = todayAttendances.filter(a => a.checkInTime && !a.checkOutTime).length;
-  const checkedOutCount = todayAttendances.filter(a => a.checkInTime && a.checkOutTime).length;
-  const absentTodayCount = Math.max(0, activeEmployees - presentTodayCount);
+  const leavesTodayCount = todayAttendances.filter(a => a.isLeave).length;
+  const presentTodayCount = todayAttendances.filter(a => !a.isLeave).length;
+  const checkedInCount = todayAttendances.filter(a => !a.isLeave && a.checkInTime && !a.checkOutTime).length;
+  const checkedOutCount = todayAttendances.filter(a => !a.isLeave && a.checkInTime && a.checkOutTime).length;
+  const absentTodayCount = Math.max(0, activeEmployees - presentTodayCount - leavesTodayCount);
 
   // Filter lists compiled dynamically
   const officesList = Array.from(new Set(employees.map(e => e.officeName).filter(Boolean)));
@@ -510,7 +511,9 @@ export default function AdminDashboard() {
               <div className="bg-[#111114] border border-slate-800 rounded-2xl p-4 shadow-xs">
                 <span className="block text-amber-500 font-mono text-[9px] uppercase tracking-wider font-bold">Absent Today</span>
                 <span className="block text-3xl font-display font-bold text-white mt-1">{absentTodayCount}</span>
-                <span className="text-[10px] text-amber-500 mt-2 block font-semibold">{checkedInCount} Currently Checked-In</span>
+                <span className="text-[10px] text-amber-500 mt-2 block font-semibold">
+                  {checkedInCount} Checked-In • <span className="text-amber-400 font-bold">{leavesTodayCount} on Leave</span>
+                </span>
               </div>
             </div>
 
@@ -533,8 +536,14 @@ export default function AdminDashboard() {
                           <span className="text-slate-500 text-[10px] block">{a.officeName}</span>
                         </div>
                         <div className="text-right font-mono text-slate-400 text-[10px] space-y-0.5">
-                          <div>IN: <span className="font-semibold text-emerald-400">{a.checkInTime}</span></div>
-                          {a.checkOutTime && <div>OUT: <span className="font-semibold text-indigo-400">{a.checkOutTime}</span></div>}
+                          {a.isLeave ? (
+                            <span className="font-semibold text-amber-500 bg-amber-950/20 border border-amber-900/40 px-2 py-0.5 rounded">ON LEAVE</span>
+                          ) : (
+                            <>
+                              <div>IN: <span className="font-semibold text-emerald-400">{a.checkInTime}</span></div>
+                              {a.checkOutTime && <div>OUT: <span className="font-semibold text-indigo-400">{a.checkOutTime}</span></div>}
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -907,20 +916,26 @@ export default function AdminDashboard() {
                             {a.officeName}
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex gap-2 items-center">
-                              {a.checkInPhoto && (
-                                <img
-                                  src={a.checkInPhoto}
-                                  alt="Checkin ID"
-                                  className="h-10 w-10 rounded-lg object-cover border border-slate-800 shadow-sm shrink-0"
-                                  referrerPolicy="no-referrer"
-                                />
-                              )}
-                              <span className="font-mono font-bold text-emerald-400 bg-emerald-950/20 border border-emerald-900/40 px-2 py-0.5 rounded">{a.checkInTime}</span>
-                            </div>
+                            {a.isLeave ? (
+                              <span className="font-semibold text-amber-500 bg-amber-950/20 border border-amber-900/40 px-2 py-1 rounded-lg uppercase">On Leave</span>
+                            ) : (
+                              <div className="flex gap-2 items-center">
+                                {a.checkInPhoto && (
+                                  <img
+                                    src={a.checkInPhoto}
+                                    alt="Checkin ID"
+                                    className="h-10 w-10 rounded-lg object-cover border border-slate-800 shadow-sm shrink-0"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                )}
+                                <span className="font-mono font-bold text-emerald-400 bg-emerald-950/20 border border-emerald-900/40 px-2 py-0.5 rounded">{a.checkInTime}</span>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4">
-                            {a.checkOutTime ? (
+                            {a.isLeave ? (
+                              <span className="text-slate-400 font-medium italic">{a.leaveReason || "Casual Leave"}</span>
+                            ) : a.checkOutTime ? (
                               <div className="flex gap-2 items-center">
                                 {a.checkOutPhoto && (
                                   <img
@@ -937,15 +952,27 @@ export default function AdminDashboard() {
                             )}
                           </td>
                           <td className="py-3 px-4 font-mono text-[10px] space-y-0.5 text-slate-400">
-                            <div>IN: {a.checkInLatitude.toFixed(5)}, {a.checkInLongitude.toFixed(5)}</div>
-                            {a.checkOutLatitude && (
-                              <div>OUT: {a.checkOutLatitude.toFixed(5)}, {a.checkOutLongitude.toFixed(5)}</div>
+                            {a.isLeave ? (
+                              <span className="text-slate-500 italic">No GPS Data (Off-duty)</span>
+                            ) : (
+                              <>
+                                <div>IN: {a.checkInLatitude?.toFixed(5)}, {a.checkInLongitude?.toFixed(5)}</div>
+                                {a.checkOutLatitude && (
+                                  <div>OUT: {a.checkOutLatitude.toFixed(5)}, {a.checkOutLongitude.toFixed(5)}</div>
+                                )}
+                                <div className="font-bold text-slate-500 text-[9px]">Acc: ±{a.gpsAccuracy}m</div>
+                              </>
                             )}
-                            <div className="font-bold text-slate-500 text-[9px]">Acc: ±{a.gpsAccuracy}m</div>
                           </td>
                           <td className="py-3 px-4 font-mono text-[10px] text-slate-400">
-                            <span className="block font-semibold text-slate-300">{a.device}</span>
-                            <span className="block mt-0.5">{a.browser}</span>
+                            {a.isLeave ? (
+                              <span className="text-slate-500 italic">—</span>
+                            ) : (
+                              <>
+                                <span className="block font-semibold text-slate-300">{a.device}</span>
+                                <span className="block mt-0.5">{a.browser}</span>
+                              </>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-right no-print">
                             <button
